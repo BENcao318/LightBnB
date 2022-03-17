@@ -6,7 +6,7 @@ module.exports = function(router, database) {
   router.post('/', (req, res) => {
     const user = req.body;
     user.password = bcrypt.hashSync(user.password, 12);
-    database.addUser(user)
+    database.query(database.addUser(user).queryString)
     .then(user => {
       if (!user) {
         res.send({error: "error"});
@@ -24,10 +24,10 @@ module.exports = function(router, database) {
    * @param {String} password encrypted
    */
   const login =  function(email, password) {
-    return database.getUserWithEmail(email)
+    return database.query(database.getUserWithEmail(email).queryString)
     .then(user => {
-      if (bcrypt.compareSync(password, user.password)) {
-        return user;
+      if (bcrypt.compareSync(password, user[0].password)) {
+        return user[0];
       }
       return null;
     });
@@ -60,7 +60,7 @@ module.exports = function(router, database) {
       return;
     }
 
-    database.getUserWithId(userId)
+    database.query(database.getUserWithId(userId).queryString)
       .then(user => {
         if (!user) {
           res.send({error: "no user with that id"});

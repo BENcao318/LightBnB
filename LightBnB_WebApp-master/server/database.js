@@ -9,6 +9,8 @@ const pool = new Pool({
   host: "localhost",
   database: "lightbnb"
 });
+
+
 /// Users
 
 /**
@@ -21,17 +23,12 @@ const getUserWithEmail = function (email) {
     SELECT * FROM users
     WHERE email = '${email}';
   `;
+  const start = Date.now();
 
-  return pool
-    .query(queryString)
-    .then(result => {
-      return result.rows[0];
-    })
-    .catch(err => {
-      console.log(err.message);
-    });
+  return {
+    queryString,
+  };
 }
-exports.getUserWithEmail = getUserWithEmail;
 
 /**
  * Get a single user from the database given their id.
@@ -43,17 +40,12 @@ const getUserWithId = function (id) {
     SELECT * FROM users
     WHERE id = '${id}';
   `
-  return pool
-    .query(queryString)
-    .then(result => {
-      return result.rows[0];
-    })
-    .catch(err => {
-      console.log(err.message);
-    });
-}
-exports.getUserWithId = getUserWithId;
+  const start = Date.now();
 
+  return {
+    queryString,
+  }
+}
 
 /**
  * Add a new user to the database.
@@ -66,17 +58,12 @@ const addUser = function (user) {
     VALUES ('${user.name}', '${user.email}', '${user.password}')
     RETURNING *;
   `
+  const start = Date.now();
 
-  return pool
-    .query(queryString)
-    .then(result => {
-      return result.rows[0];
-    })
-    .catch(err => {
-      console.log(err);
-    })
+  return {
+    queryString,
+  }
 }
-exports.addUser = addUser;
 
 /// Reservations
 
@@ -94,18 +81,12 @@ const getAllReservations = function (guest_id, limit = 10) {
     ORDER BY start_date
     LIMIT $2;
   `
-  return pool
-    .query(queryString, [guest_id, limit])
-    .then(result => {
-      return result.rows;
-    })
-    .catch(err => {
-      console.log(err.message);
-    })
+  const start = Date.now();
 
-  // return getAllProperties(null, 2);
+  return {
+    queryString,
+  }
 }
-exports.getAllReservations = getAllReservations;
 
 /// Properties
 
@@ -117,6 +98,7 @@ exports.getAllReservations = getAllReservations;
  */
 const getAllProperties = function (options, limit = 10) {
   const queryParams = [];
+  const start = Date.now();
 
   let queryString = `
     SELECT properties.*, avg(property_reviews.rating) as average_rating
@@ -157,19 +139,11 @@ const getAllProperties = function (options, limit = 10) {
     `;
   }
 
-  console.log(queryParams, queryString)
-
-  return pool
-    .query(queryString, queryParams)
-    .then(result => {
-      return result.rows;
-    })
-    .catch(err => {
-      console.log(err.message);
-    });
+  return {
+    queryString,
+    queryParams,
+  };
 }
-exports.getAllProperties = getAllProperties;
-
 
 /**
  * Add a property to the database
@@ -177,6 +151,7 @@ exports.getAllProperties = getAllProperties;
  * @return {Promise<{}>} A promise to the property.
  */
 const addProperty = function (property) {
+  const start = Date.now();
   const queryString = `
     INSERT INTO properties (owner_id, title, description, thumbnail_photo_url, cover_photo_url, cost_per_night, street, city, province, post_code, country, parking_spaces, number_of_bathrooms, number_of_bedrooms)
     VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
@@ -185,13 +160,30 @@ const addProperty = function (property) {
 
   const queryParams = [property.owner_id, property.title, property.description, property.thumbnail_photo_url, property.cover_photo_url, property.cost_per_night, property.street, property.city, property.province, property.post_code, property.country, property.parking_spaces, property.number_of_bathrooms, property.number_of_bedrooms];
 
-  return pool
-    .query(queryString, queryParams)
-    .then(result => {
-      return result.rows;
-    })
-    .catch(err => {
-      console.log(err.message);
-    });
+  return {
+    queryString,
+    queryParams
+  }
 }
-exports.addProperty = addProperty;
+
+module.exports = {
+  query: (queryString, queryParams) => {
+    const start = Date.now();
+    return pool
+      .query(queryString, queryParams)
+      .then(result => {
+        const duration = Date.now() - start;
+        console.log('executed query', { queryString, duration, rows: result.rowCount });
+        return result.rows;
+      })
+      .catch(err => {
+        console.log(err.message);
+      });
+  },
+  getUserWithEmail,
+  getUserWithId,
+  addUser,
+  getAllReservations,
+  getAllProperties,
+  addProperty
+}
